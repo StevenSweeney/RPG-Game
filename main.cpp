@@ -1,6 +1,6 @@
 /*
 
-Table of Contents:
+The Table of Contents:
 Use the find feature (CMD/CTRL+F) to find different parts of the game code. Hopefully all important functions and code will be here
 
 ---
