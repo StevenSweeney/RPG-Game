@@ -5,39 +5,27 @@
 ----
 
     answer = 0;
-    while (answer > 2 || answer < 1) {
+    while (true) {
 
         std::cin >> answer;
 
-        if (answer == 1) {
-
-            //do if answer = 1
-
-        } else if (answer == 2) {
-
-            //do if answer = 2
-
+        if (std::cin.fail() || (parameters)) {
+            std::cout << "error message here\n";
+            std::cin.clear();
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
         } else {
 
-            std::cout << "Invalid number, please input 1 or 2.\n";
+            if (answer == 1) {
 
+                //do if answer = 1
+
+            } else if (answer == 2) {
+
+                //do if answer = 2
+
+            }
+            break;
         }
-    }
-
-
-    CAN ALSO BE MULTIPLE MORE BY ADDING...
-
-    else if (answer == 3) {
-
-        ...
-
-    } else if (answer == 4) {
-
-        ...
-
-    } else {
-
-        ...   
 
     }
 */
