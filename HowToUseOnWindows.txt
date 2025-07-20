@@ -1,0 +1,7 @@
+How to use this program on Windows:
+
+As of right now, I do not believe that the Unix Executable file works on Windows... so in order to make this run in windows you can either
+
+1. Download the source code (main.cpp) and open in Visual Studio Code or any other IDE, and run the file from there.
+
+2. convert main.cpp to an exe

@@ -36,15 +36,42 @@ mysterioustree()
 quest()
 quest manager
 ---
+removefrominventory()
+call this to remove something from the player inventory
+---
+addtoinventory()
+call this to add something to the player inventory
+---
+determineEnemyHealRate()
+returns a heal rate value based on what enemy name and level you give it
+---
+determineEnemyDamage()
+returns a damage value based on what enemy name and level you give it
+---
+determineEnemyHealth()
+returns a health value based on what enemy name and level you give it
+---
+newbattle()
+battle script
+---
+traininggrounds()
+village training grounds
+---
 
 EXPLOREABLES:
 thewoods()
 thevillageexploreable()
 
+INVENTORY TYPES:
+1 = weapon short-range
+2 = healing potion
+3 = weapon long-range
+
 */
 
 #include <iostream>
 #include <vector>
+#include <stdlib.h>
 
 // init player variables
 double playerHealth = 10; //player health. Default is 10
@@ -58,6 +85,8 @@ double craftableCost = 0; //blacksmith craftable cost
 int matSelect = 0; //material # in blacksmith
 int weaponSelect = 0; //weapon type # in blacksmith
 double determineBoughtWeaponStrength = 0; //use to determine how strong the weapon the player bought from the blacksmith is
+double playerLuck = 1; //luck the player has for the game. can be upgraded with levels and stuff
+double armorLevel = 1; //the higher this is, the more your player is protected from attacks. this shouldnt be too high, max is probably 3 because the damage dealt to player is divided by this number
 std::string weaponName; //weapon name you bought at the blacksmith
 
 //init player vectors
@@ -67,7 +96,7 @@ std::vector<double> playerInventoryStrength; //tells computer what damage this i
 std::vector<std::string> playerQuests; //list of what quests the player can do
 std::vector<std::string> playerExploreables = {"The Woods", "The Village"}; //list of what the player can explore
 std::vector<std::string> woodsExploreables = {"Mysterious Tree", "Berry Bushes"}; //if the player chooses The Woods to explore, these are the default options
-std::vector<std::string> villageExploreables = {"Blacksmith", "Bookshop", "Field", "Training Grounds"}; //if the player chooses The Village to explore, these are the default options
+std::vector<std::string> villageExploreables = {"Blacksmith", "Bookshop", "Field", "Training Grounds", "Armorer", "Ranged Weaponsmith"}; //if the player chooses The Village to explore, these are the default options
 std::vector<std::string> blacksmithMaterials = {"Wood", "Stone", "Copper", "Bronze", "Iron", "Steel"}; //current available materials for crafting a new weapon in the blacksmith
 std::vector<double> blacksmithMatCost = {4, 12, 20, 28, 40, 58}; //material's cost for crafting a new weapon in the blacksmith
 std::vector<std::string> weaponTypes = {"Axe", "Sword", "Small Blade", "Large Hammer"}; //blacksmith weapon types
@@ -78,6 +107,340 @@ bool hasFirstQuest = false;
 
 //dev variables
 bool testing = true;
+std::string string1;
+int int1;
+double double1;
+
+void completequest(int questID) {
+    std::cout << "---------------\nQuest completed\n---------------\n" << playerQuests[questID];
+    playerQuests.erase(playerQuests.begin() + questID);
+}
+
+void removefrominventory(int itemlocation) {
+    playerInventory.erase(playerInventory.begin() + itemlocation);
+    playerInventoryType.erase(playerInventoryType.begin() + itemlocation);
+    playerInventoryStrength.erase(playerInventoryStrength.begin() + itemlocation);
+}
+
+void addtoinventory(std::string name, int type, double strength) {
+    playerInventory.push_back(name);
+    playerInventoryType.push_back(type);
+    playerInventoryStrength.push_back(strength);
+}
+
+double determineEnemyHealRate(std::string enemyName, double enemyLevel) {
+    if (enemyName == "Basic Goblin") {
+        return(3 * enemyLevel);
+    } else {
+        return(0);
+    }
+}
+
+double determineEnemyDamage(std::string enemyName, double enemylevel) { //has a list of enemies in the game, and will return the appropriate damage the enemy should do
+    if (enemyName == "Basic Goblin") {
+        return(2.5 * enemylevel);
+    } else {
+        return(0);
+    }
+}
+
+double determineEnemyHealth(std::string enemyName, double enemyLevel) { //has a list of enemies in the game, and will return the appropriate health the enemy should have
+    if (enemyName == "Basic Goblin") {
+        return (10 * enemyLevel);
+    } else {
+        return (0);
+    }
+}
+
+void newbattle(std::string battleName, std::vector<std::string> enemies, std::vector<double> enemyLevel, bool choiceOfStart) {
+
+    double playerxpearned = 0; //total XP player has earned/lost throughout the battle
+    bool forfeit = false; //if this is ever set to true, battle will be called off
+    bool playerTurn = true; //determines if the player has the next turn or the enemy does
+    int enemyFighting = 0; //which enemy the player is fighting (in the vector)
+    double damageDealt = 0; //init of the variable that keeps track of how much damage player does
+
+    std::cout << "\n\n----------\nNew Battle\n----------\n--" << battleName << "--\n" << "Enemies: " << enemies.size() << "\n\n";
+    if (choiceOfStart == true) { // if the battle allows you to forfeit right away, it will ask if you want to.
+        std::cout << "Would you like to start this battle?\n1) Yes\n2) No\n";
+
+        answer = 0;
+        while (true) {
+            std::cin >> answer;
+            if (std::cin.fail() || (answer != 1 && answer != 2)) {
+                std::cout << "Invalid input. Please choose 1 or 2.\n";
+                std::cin.clear();
+                std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            } else if (answer == 2) {
+                forfeit = true;
+                break;
+            }
+            break;
+        }
+    }
+
+    double enemyHealth = determineEnemyHealth(enemies[enemyFighting], enemyLevel[enemyFighting]); //determines enemy health
+    double enemyDamage = determineEnemyDamage(enemies[enemyFighting], enemyLevel[enemyFighting]); //determines enemy damage
+    double enemyHealRate = determineEnemyHealRate(enemies[enemyFighting], enemyLevel[enemyFighting]); //determines enemy heal rate
+
+    std::cout << "You first fight a " << enemies[enemyFighting] << " who is level " << enemyLevel[enemyFighting] << ".\n\n";
+
+    while (forfeit == false && enemyFighting < enemies.size() && playerHealth > 0) { //if the player health is over 0, there are more enemies, or if player has not forfeit, it will still run
+
+        // init battle vars, may put into global space
+        int number = 1;
+        std::vector<double> availableWeaponStrengths = {};
+        std::vector<int> weaponLocation = {};
+        int enemyHealRecharge = 2; //if this is 3, enemy will be able to use its healing ability. Sets to 2 because it will be added by 1 soon
+
+        enemyHealRecharge++; //adds 1 to the charge of if the enemy can heal or not, every turn
+
+        std::cout << "\n\nCurrent Enemy: " << enemies[enemyFighting] << "\nCurrent health: " << enemyHealth << "\n\nYou:\nCurrent Health: " << playerHealth << "/" << maxPlayerHealth << "\n\n";
+
+        if (playerTurn == true) { // Play options (if its players turn)
+
+            std::cout << "What would you like to do?\n\n1) Use weapon\n2) Use potion\n3) Attempt dodge\n4) Attempt forfeit\n#";
+
+            answer = 0;
+            while (true) {
+
+                std::cin >> answer;
+                if (std::cin.fail()) {
+                    std::cout << "Invalid input. please choose 1 to 4.\n";
+                    std::cin.clear();
+                    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+                } else if (answer == 1) { // Use weapon
+                    std::cout << "\nPlease choose a weapon to use...\n\n";
+
+                    for (int i = 0; i < playerInventory.size(); i++) { // will add different strengths based on inventory items to a list that you can choose from. only adds if the type of weapon = 1 (weapon)
+
+                        if (playerInventoryType[i] == 1) {
+
+                            std::cout << number << ") " << playerInventory[i] << ", Strength: " << playerInventoryStrength[i] << "\n";
+                            availableWeaponStrengths.push_back(playerInventoryStrength[i]);
+                            number++;
+
+                        }
+
+                    }
+
+                    std::cout << "\nI'll use weapon ";
+
+                    answer = 0;
+                    while (true) {
+                        std::cin >> answer;
+                        if (std::cin.fail() || (answer < 1 && answer > availableWeaponStrengths.size())) {
+                            std::cout << "Invalid input.\n";
+                            std::cin.clear();
+                            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+                        } else {
+
+                            damageDealt = availableWeaponStrengths[answer - 1] * playerLuck;
+
+                            enemyHealth = enemyHealth - damageDealt;
+
+                            std::cout << "You did " << damageDealt << " damage!\n-----";
+
+                            playerxpearned = playerxpearned + damageDealt / 4;
+
+                            playerTurn = false; // when playerturn is false, it is now the enemy's turn
+                            break;
+                        }
+                    }
+
+                    break;
+                } else if (answer == 2) { // Use potion
+                    std::cout << "Choose a potion to use\n\nHealing:\n";
+
+                    for (int i = 0; i < playerInventory.size(); i++) {
+
+                        if (playerInventoryType[i] == 2) {
+
+                            std::cout << number << ") " << playerInventory[i] << ", Heal Strength: " << playerInventoryStrength[i] << "\n";
+                            availableWeaponStrengths.push_back(playerInventoryStrength[i]);
+                            weaponLocation.push_back(i);
+                            number++;
+
+                        }
+                        
+
+                    }
+
+                    std::cout << "\nI'll use potion ";
+
+                        answer = 0;
+                        while (true) {
+                            std::cin >> answer;
+                            if (std::cin.fail() || (answer < 1 && answer > availableWeaponStrengths.size())) {
+                                std::cout << "Invalid input.\n";
+                                std::cin.clear();
+                                std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+                            } else {
+                                
+                                playerHealth = playerHealth + availableWeaponStrengths[answer - 1];
+
+                                std::cout << "You used " << playerInventory[weaponLocation[answer - 1]] << " and healed for " << availableWeaponStrengths[answer - 1] << " health!";
+
+                                if (playerHealth > maxPlayerHealth) { //this is so the player cannot go over their max player health
+                                    playerHealth = maxPlayerHealth;
+                                }
+
+                                std::cout << "\nYou are now at " << playerHealth << "/" << maxPlayerHealth << " health!\n";
+
+                                removefrominventory(weaponLocation[answer - 1]);
+
+                                playerxpearned = playerxpearned + damageDealt / 6;
+
+                                playerTurn = false;
+                                break;
+                            }
+                        }
+
+                    break;
+                } else if (answer == 3) { // Attempt dodge, coming soon
+
+                    std::cout << "This feature is coming soon.\n";
+
+                    break;
+                } else if (answer == 4) { // Attempt forfeit, coming soon
+
+                    std::cout << "This feature is coming soon.\n";
+
+                    break;
+                }
+
+            }
+
+        } else { // enemy turn
+            std::cout << "It is now the enemy's turn.\n Enemy is choosing what to do...\n";
+            int randomEnemyOption = 1;
+            bool goodEnemyOption = false;
+
+            //enemy will only heal if HP is low and the enemy option is 50-75. same with dodge
+
+            while (goodEnemyOption == false) { //the enemy is basically rolling a 100 sided die, and depending on what it lands on it will determine if that is a good idea based on it's health. if it isn't safe, it'll re-roll.
+                srand(time(NULL));
+                randomEnemyOption = rand() % 100;
+
+                //this can be compressed all into 1 if statement, but this is for better readability
+                if ((randomEnemyOption > 50 && randomEnemyOption < 75) && enemyHealth < 5 && enemyHealRecharge >= 3) { //between 50 and 75 is healing, so it will check if it is smart to heal (if health < 5) and if it is even able to heal
+                    goodEnemyOption = true;
+                } else if ((randomEnemyOption > 75 && randomEnemyOption < 100) && enemyHealth < 2) { //between 75 and 100 is dodging, so it will check if it is smart to dodge (if health < 2)
+                    goodEnemyOption = false; //this SHOULD be true but the feature is coming soon, same with the player dodging ability. 
+                } else if (randomEnemyOption > 0 && randomEnemyOption < 50) { //between 0 and 50 is damaging/battling, and this is always an available option, that is why it has no other parameter
+                    goodEnemyOption = true;
+                }
+            }
+
+            if (randomEnemyOption > 0 && randomEnemyOption < 50) { //damage player, 1/2 chance
+
+                std::cout << "\nThe enemy decides to attack! It deals " << enemyDamage << " damage!";
+
+                playerHealth = (playerHealth - enemyDamage) / armorLevel;
+
+                std::cout << "\n\nYou are now at " << playerHealth << "/" << maxPlayerHealth << " health!\n";
+
+            } else if (randomEnemyOption > 50 && randomEnemyOption < 75) { //heal, 1/4 chance
+
+                enemyHealth = enemyHealth + enemyHealRate;
+                enemyHealRecharge = 0; //resets the charge for healing for enemies
+
+                std::cout << "\nThe enemy decides to heal! It heals up to " << enemyHealth << " health!\n";
+
+            } else if (randomEnemyOption > 75 && randomEnemyOption < 100) { //dodge next attack, 1/4 chance
+
+                //coming soon!
+
+            }
+
+
+            playerTurn = true; // sets it back to the player's turn
+        }
+
+        { //determine if player or enemy is dead
+
+            if (playerHealth <= 0) {
+                std::cout << "\n\nOh no! You died!\nYou are hospitalized, and have to pay the fee of 5 coins and 1 XP point.";
+
+                playerXP--;
+                playerCoins = playerCoins - 5;
+
+                break;
+            }
+            if (enemyHealth <= 0) {
+
+                if (enemyFighting == enemies.size()) {
+                    std::cout << "\nYou defeated the " << enemies[enemyFighting] << "! That's all of the enemies for this battle, you won!";
+                    std::cout << "\n\n----------\nPlayer Won\n----------\nXP earned: " << playerxpearned << "\nEnemies defeated: " << enemies.size() << "\n";
+
+                    playerXP = playerXP + playerxpearned;
+
+                    if (hasFirstQuest == true) {
+                        completequest(0);
+                    }
+
+                } else {
+                    std::cout << "\nYou defeated the " << enemies[enemyFighting] << "! Now you will fight a level " << enemyLevel[enemyFighting + 1] << " " << enemies[enemyFighting + 1];
+                }
+
+                enemyFighting++;
+                enemyHealRecharge = 2;
+
+                enemyHealth = determineEnemyHealth(enemies[enemyFighting], enemyLevel[enemyFighting]);
+                enemyDamage = determineEnemyDamage(enemies[enemyFighting], enemyLevel[enemyFighting]);
+                enemyHealRate = determineEnemyHealRate(enemies[enemyFighting], enemyLevel[enemyFighting]);
+
+                playerTurn = true; //player always starts a new battle first
+
+                break;
+            }
+
+        }
+
+    }
+}
+
+void traininggrounds() {
+
+    std::cout << "\n\n----------------\nTraining Grounds\n----------------\nWelcome to the training grounds! Fight makeshift enemies to train and try out new weapons or armor.\n";
+    std::cout << "\nWhat should you train?\n1) Sword (short ranged)\n2) Bow (long ranged)\n3) Basic Battle\n4) Exit\n\nI will choose #";
+
+    answer = 0;
+    while (true) {
+
+        std::cin >> answer;
+        if (std::cin.fail() || (answer < 1 || answer > 4)) {
+            std::cout << "Invalid input. Please select 1-4.\n";
+            std::cin.clear();
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        } else {
+            std::cout << "\n\n";
+            if (answer == 4) {
+                break;
+            } else if (answer == 1) {
+                { //code for short-ranged training
+                    std::cout << "Welcome to short-ranged sword training. Here, you can train with your sword to level it up or try it out.\n";
+                    //develop soon
+                }
+                break;
+            } else if (answer == 2) {
+                { //code for long-ranged training
+                    std::cout << "Welcome to long-ranged bow training. Here, you can train with your bow to level it up or try it out.";
+                    //develop soon
+                }
+                break;
+            } else if (answer == 3) {
+                { //code for simple battle training
+                    std::cout << "Welcome to basic battle training. Here, you can fight against enemies as if it was a real battle and train your weapons.";
+                    newbattle("Test Battle", {"Basic Goblin"}, {1}, true); //this is a test run. it goes name, enemy name list (which will determine enemy health etc), enemy level which multiplies enemy stats, and if the player has a choice to forfeit before the battle.
+                }
+                break;
+            }
+        }
+
+    }
+
+}
 
 void quest(std::string name, std::string desc) {
 
@@ -321,13 +684,19 @@ void thevillageexploreable() {
             villageblacksmith();
             break;
         } else if (villageExploreables[answer - 1] == "Bookshop") {
-
+            //this is where you can maybe get some knowledge/XP. read books for coins and gain XP
             break;
         } else if (villageExploreables[answer - 1] == "Field") {
-
+            //train speed maybe?
             break;
         } else if (villageExploreables[answer - 1] == "Training Grounds") {
-
+            traininggrounds();
+            break;
+        } else if (villageExploreables[answer - 1] == "Armorer") {
+            //buy or make armor
+            break;
+        } else if (villageExploreables[answer - 1] == "Ranged Weaponsmith") {
+            //buy or make long ranged weapons like bows
             break;
         } else {
             std::cout << "Invalid answer, try again.\n";
@@ -376,7 +745,7 @@ void currentquests() { //prints everything in quests
     std::cout << "Your current quests:\n\n";
     for (int i = 0; i <= playerQuests.size(); i++) {
 
-        std::cout << playerQuests[i];
+        std::cout << playerQuests[i] << "\n";
 
     }
     std::cout << "\n";
@@ -390,9 +759,9 @@ void checkinventory() { //prints everything in inventory
     } else {
 
     std::cout << "Your inventory:\n\n";
-    for (int i = 0; i <= playerInventory.size(); i++) {
+    for (int i = 0; i <= playerInventory.size() - 1; i++) {
 
-        std::cout << playerInventory[i];
+        std::cout << playerInventory[i] << ", Strength: " << playerInventoryStrength[i] << "\n";
 
     }
     std::cout << "\n";
@@ -401,7 +770,7 @@ void checkinventory() { //prints everything in inventory
 
 void currentplayerstats() {//prints current player stats
 
-    std::cout << "Current Player Stats:\nHealth: " << playerHealth << "/" << maxPlayerHealth << "\nStrength: " << playerStrength << "\nSpeed: " << playerSpeed << "\nTotal XP: " << playerXP << "\nCoins: " << playerCoins << "\n";
+    std::cout << "Current Player Stats:\nHealth: " << playerHealth << "/" << maxPlayerHealth << "\nStrength: " << playerStrength << "\nSpeed: " << playerSpeed << "\nTotal XP: " << playerXP << "\nCoins: " << playerCoins << "\nLuck: " << playerLuck << "\n";
 
 }
 
@@ -477,7 +846,12 @@ void game() { //actual gameplay
     std::string tempans;
     std::cin >> tempans;
 
-        //Actual game start
+    std::cout << "\nHere is a starting weapon, a basic wooden sword.\n";
+
+    addtoinventory("Wooden Sword", 1, 4.5); //name, type, strength
+    addtoinventory("Healing Potion", 2, 2);
+
+    //Actual game start
 
     std::string toDo;
     answer = 0;
@@ -501,6 +875,22 @@ void game() { //actual gameplay
             std::cout << "Testing - give coins, insert amount: ";
             std::cin >> answer;
             playerCoins = playerCoins + answer;
+        } else if (testing == true && toDo == "addinv") {
+            std::cout << "\nname ";
+            std::cin >> string1;
+
+            std::cout << "\ntype ";
+            std::cin >> int1;
+
+            std::cout << "\nstrength ";
+            std::cin >> double1;
+
+            addtoinventory(string1, int1, double1);
+        } else if (testing == true && toDo == "reminv") {
+            std::cout << "\ninventory # (start 0) ";
+            std::cin >> int1;
+
+            removefrominventory(int1);
         } else {
             std::cout << "Invalid. Try again...";
         }
