@@ -66,6 +66,9 @@ INVENTORY TYPES:
 1 = weapon short-range
 2 = healing potion
 3 = weapon long-range
+4 = material to sell
+5 = tool
+6 = junk
 
 */
 
@@ -96,11 +99,18 @@ std::vector<double> playerInventoryStrength; //tells computer what damage this i
 std::vector<std::string> playerQuests; //list of what quests the player can do
 std::vector<std::string> playerExploreables = {"The Woods", "The Village"}; //list of what the player can explore
 std::vector<std::string> woodsExploreables = {"Mysterious Tree", "Berry Bushes"}; //if the player chooses The Woods to explore, these are the default options
-std::vector<std::string> villageExploreables = {"Blacksmith", "Bookshop", "Field", "Training Grounds", "Armorer", "Ranged Weaponsmith"}; //if the player chooses The Village to explore, these are the default options
+std::vector<std::string> villageExploreables = {"Blacksmith", "Bookshop", "Field", "Training Grounds", "Armorer", "Ranged Weaponsmith", "News Board", "Butcher Shop"}; //if the player chooses The Village to explore, these are the default options
 std::vector<std::string> blacksmithMaterials = {"Wood", "Stone", "Copper", "Bronze", "Iron", "Steel"}; //current available materials for crafting a new weapon in the blacksmith
 std::vector<double> blacksmithMatCost = {4, 12, 20, 28, 40, 58}; //material's cost for crafting a new weapon in the blacksmith
 std::vector<std::string> weaponTypes = {"Axe", "Sword", "Small Blade", "Large Hammer"}; //blacksmith weapon types
 std::vector<double> weaponCostMultipliers = {0.75, 1, 0.6, 1.25};
+std::vector<std::string> armorLevelNames = {"None", "Bronze", "Iron", "Steel"};
+std::vector<double> armorCost = {0, 25, 75, 180};
+std::vector<std::string> enemiesRanged = {"Bat"};
+std::vector<std::string> rangedWeaponsStock;
+std::vector<int> rangedWeaponsStrength;
+std::vector<double> rangedWeaponsCost;
+std::vector<std::string> villageNews;
 
 // init the player quests and other save states
 bool hasFirstQuest = false;
@@ -111,24 +121,211 @@ std::string string1;
 int int1;
 double double1;
 
-void completequest(int questID) {
-    std::cout << "---------------\nQuest completed\n---------------\n" << playerQuests[questID];
-    playerQuests.erase(playerQuests.begin() + questID);
+void villagenewsboard() {
+    std::cout << "==== Village News Board ====\n\n";
+
+    if (villageNews.size() == 0) {
+
+        std::cout << "Sorry, the news board currently has nothing written on it. Maybe come back later?\n";
+
+    } else {
+
+        for (int i = 0; i < villageNews.size(); i++) {
+            std::cout << "[ " << villageNews[i] << " ]\n";
+        }
+
+    }
+
+    std::cout << "\n==== ====\n\n";
+
 }
 
-void removefrominventory(int itemlocation) {
-    playerInventory.erase(playerInventory.begin() + itemlocation);
-    playerInventoryType.erase(playerInventoryType.begin() + itemlocation);
-    playerInventoryStrength.erase(playerInventoryStrength.begin() + itemlocation);
-}
-
-void addtoinventory(std::string name, int type, double strength) {
+void addtoinventory(std::string name, int type, double strength) { //Call this to add something to the inventory. moved to this spot in script at 8/10/25 because of rangedweaponsmith() function
     playerInventory.push_back(name);
     playerInventoryType.push_back(type);
     playerInventoryStrength.push_back(strength);
 }
 
-double determineEnemyHealRate(std::string enemyName, double enemyLevel) {
+bool purchase(std::string name, double cost) { //handles purchasing. moved to this spot in script at 7/25/25 (because of armorer() function)
+
+    if (playerCoins >= cost) {
+        std::cout << "\n-----------\nPurchase Successful\n-----------\n\nPurchased " << name << " for " << cost << " coins.\n";
+        playerCoins = playerCoins - cost;
+        std::cout << "You now have " << playerCoins << " coins.\n\n";
+        return (true);
+    } else {
+        std::cout << "\n-----------\nPurchase Unsuccessful\n-----------\n\nYou don't have enough coins.\n";
+        return (false);
+    }
+}
+
+void rangedweaponsmith() {
+
+    //init rangedweaponsmith variables
+    int chosen;
+
+    std::cout << "Welcome to the Ranged Weapon Smith. Buy ranged weapons here.\n\nWhat would you like to do?\n1) Buy ranged weapons\n2) Exit\n#";
+
+    answer = 0;
+    while (true) {
+        std::cin >> answer;
+        if (std::cin.fail() || (answer != 1 && answer != 2)) {
+            std::cout << "Invalid input. Please choose 1 or 2.\n";
+            std::cin.clear();
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        } else if (answer == 1 && rangedWeaponsStock.size() > 0) {
+            std::cout << "Our stock currently has...\n";
+
+            for (int i = 0; i < rangedWeaponsStock.size(); i++) {
+                std::cout << i + 1 << ") " << rangedWeaponsStock[i] << " | Damage: " << rangedWeaponsStrength[i] << " | Cost: " << rangedWeaponsCost[i] << "\n";
+            }
+
+            std::cout << "Which one would you like? #";
+
+            answer = 0;
+            while (true) {
+                std::cin >> answer;
+                if (std::cin.fail() || (answer < 1 || answer > rangedWeaponsStock.size() - 1)) {
+                    std::cout << "Invalid input. Please try again.\n";
+                    std::cin.clear();
+                    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+                } else {
+
+                    chosen = answer - 1;
+
+                    { //script
+
+                        std::cout << "You chose the " << rangedWeaponsStock[chosen] << " for " << rangedWeaponsCost[chosen] << ". Would you like to buy it?\n1) Yes\n2) No\n#";
+
+                        answer = 0;
+                        while (true) {
+                            std::cin >> answer;
+                            if (std::cin.fail() || (answer != 1 || answer != 2)) {
+                                std::cout << "Invalid input. Please try again.\n";
+                                std::cin.clear();
+                                std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+                            } else if (answer == 1) {
+                                if (purchase(rangedWeaponsStock[chosen], rangedWeaponsCost[chosen]) == true) {
+
+                                    std::cout << "Thank you for shopping, please come again!";
+
+                                    addtoinventory(rangedWeaponsStock[chosen], 3, rangedWeaponsStrength[chosen]);
+
+                                    { //erase weapon from the weaponsmith stock
+                                        rangedWeaponsCost.erase(rangedWeaponsCost.begin() + chosen);
+                                        rangedWeaponsStock.erase(rangedWeaponsStock.begin() + chosen);
+                                        rangedWeaponsStrength.erase(rangedWeaponsStrength.begin() + chosen);
+                                    }
+                                    break;
+                                } else {
+                                    std::cout << "Maybe you'll get it next time...";
+                                }
+                            }
+                            break;
+                        }
+                    }
+                    break;
+                }
+                break;
+            }
+        } else if (answer == 1 && rangedWeaponsStock.size() == 0) {
+            std::cout << "Sorry, unfortunately we do not have any weapons in stock as of right now. You can check the village news board to see when we have some in stock!\n\n";
+            break;
+        } else if (answer == 2) {
+            break;
+        }
+        break;
+    }
+}
+
+void armorer() {
+    std::cout << "Welcome to the Armorer. Upgrade your armor here.\n\nWhat would you like to do?\n1) Buy Armor\n2) Sell Material (Coming soon)\n3) Exit\n#";
+
+    answer = 0;
+    while (true) {
+        std::cin >> answer;
+        if (std::cin.fail() || (answer != 1 && answer != 2 && answer != 3)) {
+            std::cout << "Invalid input. Please choose 1, 2, or 3.\n";
+            std::cin.clear();
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        } else if (answer == 1) { //buy armor
+            { //armor buying process
+
+                std::cout << "So, you want to buy armor? Sure, which level of armor would you like?\n\n";
+
+                for (int i = 1; i < armorLevelNames.size(); i++) { //print armor choices (starts at 1 because 0th data of armorLevelNames is "None")
+
+                    std::cout << i << ") " << armorLevelNames[i] << " | Cost: " << armorCost[i] << " coins\n";
+
+                }
+
+                std::cout << "#";
+
+                answer = 0;
+                while (true) {
+                    std::cin >> answer;
+                    if (std::cin.fail() || (answer < 0 || answer > armorLevelNames.size())) {
+                        std::cout << "Invalid Input.\n";
+                        std::cin.clear();
+                        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+                    } else {
+                        int armorBuying = answer;
+                        std::cout << "You chose " << armorLevelNames[answer] << " armor for " << armorCost[answer] << " coins? Would you like to proceed with this purchase?\n1) Yes\n2) No\n#";
+
+                        answer = 0;
+                        while (true) {
+                            std::cin >> answer;
+                            if (std::cin.fail() || (answer != 1 && answer != 2)) {
+                                std::cout << "Invalid Input. Please choose 1 or 2.\n";
+                                std::cin.clear();
+                                std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+                            } else if (answer == 1) {
+                                if (purchase(armorLevelNames[armorBuying] + " Armor", armorCost[armorBuying]) == true) {
+
+                                    armorLevel = armorBuying;
+
+                                    std::cout << "Thanks for coming!\n";
+                                    break;
+                                } else {
+                                    std::cout << "Unfortunate. Come back when you have some coins!\n";
+                                    break;
+                                }
+                                break;
+                            } else if (answer == 2) {
+                                break;
+                            }
+                            break;
+                        }
+                        break;
+                    }
+                    break;
+                }
+
+            }
+            break;
+        } else if (answer == 2) { //sell material
+            std::cout << "This feature is coming soon.\n";
+            break;
+        } else if (answer == 3) { //exit
+            std::cout << "\n\nPlease come again!\n";
+            break;
+        }
+        break;
+    }
+}
+
+void completequest(int questID) { // Call this to tell the player they've completed a quest and delete that from the quest list
+    std::cout << "---------------\nQuest completed\n---------------\n" << playerQuests[questID];
+    playerQuests.erase(playerQuests.begin() + questID);
+}
+
+void removefrominventory(int itemlocation) { //Call this to remove something from the inventory
+    playerInventory.erase(playerInventory.begin() + itemlocation);
+    playerInventoryType.erase(playerInventoryType.begin() + itemlocation);
+    playerInventoryStrength.erase(playerInventoryStrength.begin() + itemlocation);
+}
+
+double determineEnemyHealRate(std::string enemyName, double enemyLevel) { //This determines how much the enemy heals when they can
     if (enemyName == "Basic Goblin") {
         return(3 * enemyLevel);
     } else {
@@ -152,7 +349,7 @@ double determineEnemyHealth(std::string enemyName, double enemyLevel) { //has a 
     }
 }
 
-void newbattle(std::string battleName, std::vector<std::string> enemies, std::vector<double> enemyLevel, bool choiceOfStart) {
+void newbattle(std::string battleName, std::vector<std::string> enemies, std::vector<double> enemyLevel, bool choiceOfStart) { //battle script
 
     double playerxpearned = 0; //total XP player has earned/lost throughout the battle
     bool forfeit = false; //if this is ever set to true, battle will be called off
@@ -485,16 +682,7 @@ void mysterioustree() {
     }
 }
 
-void purchase(std::string name, double cost) {
 
-    if (playerCoins >= cost) {
-        std::cout << "\n-----------\nPurchase Successful\n-----------\n\nPurchased " << name << " for " << cost << " coins.\n";
-        playerCoins = playerCoins - cost;
-        std::cout << "You now have " << playerCoins << " coins.";
-    } else {
-        std::cout << "\n-----------\nPurchase Unsuccessful\n-----------\n\nYou don't have enough coins.\n";
-    }
-}
 
 void craftweapon() {
 
@@ -693,10 +881,16 @@ void thevillageexploreable() {
             traininggrounds();
             break;
         } else if (villageExploreables[answer - 1] == "Armorer") {
-            //buy or make armor
+            armorer(); //buy or make armor
             break;
         } else if (villageExploreables[answer - 1] == "Ranged Weaponsmith") {
-            //buy or make long ranged weapons like bows
+            rangedweaponsmith();
+            break;
+        } else if (villageExploreables[answer - 1] == "News Board") {
+            villagenewsboard();
+            break;
+        } else if (villageExploreables[answer - 1] == "Butcher Shop") {
+
             break;
         } else {
             std::cout << "Invalid answer, try again.\n";
@@ -728,6 +922,9 @@ void explore() { //exploration script
             break;
         } else if (playerExploreables[answer - 1] == "The Village") {
             thevillageexploreable();
+            break;
+        } else if (playerExploreables[answer - 1] == "The Mines") {
+            //the mines where you can get ores and sell them for coins, will need pickaxe
             break;
         } else {
             std::cout << "Invalid number, try again\n";
@@ -770,7 +967,7 @@ void checkinventory() { //prints everything in inventory
 
 void currentplayerstats() {//prints current player stats
 
-    std::cout << "Current Player Stats:\nHealth: " << playerHealth << "/" << maxPlayerHealth << "\nStrength: " << playerStrength << "\nSpeed: " << playerSpeed << "\nTotal XP: " << playerXP << "\nCoins: " << playerCoins << "\nLuck: " << playerLuck << "\n";
+    std::cout << "Current Player Stats:\nHealth: " << playerHealth << "/" << maxPlayerHealth << "\nStrength: " << playerStrength << "\nSpeed: " << playerSpeed << "\nTotal XP: " << playerXP << "\nCoins: " << playerCoins << "\nLuck: " << playerLuck << "\nArmor Level: " << armorLevel << "\n";
 
 }
 
@@ -857,7 +1054,7 @@ void game() { //actual gameplay
     answer = 0;
 
     while (toDo != "Exit") {
-        std::cout << "What should you do? (type 'Help' for commands)\n";
+        std::cout << "What should you do? (type 'Help' for commands)\nCurrent Coins: " << playerCoins << "\n";
         std::cin >> toDo;
         std::cout << "\nYou Chose: " << toDo << "\n\n";
 
